@@ -79,3 +79,7 @@ items.json
 *.log
 *.aux
 *.toc
+*.out
+
+# Haskell
+*-solution*
