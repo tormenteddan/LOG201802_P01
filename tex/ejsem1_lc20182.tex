@@ -10,6 +10,26 @@
 \usepackage[dvipsnames]{xcolor}
 \usepackage{sectsty}
 \usepackage{dirtree}
+\usepackage{enumitem}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\footnotesize,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2
+}
 
 \setlength{\DTbaselineskip}{20pt}
 \DTsetlength{1em}{3em}{0.1em}{1pt}{4pt}
@@ -45,5 +65,93 @@
 \begin{document}
 
 \maketitle
+
+\section{Objetivo}
+
+\noindent
+Que el alumno empiece a conocer y/o ejercitar sus habilidades en programación funcional. Se familiarizará,\
+además, con la sintaxis y el modo de ejecución del lenguaje de programación \verb+Haskell+.\
+Se trabajará con listas, recursión, tipos de datos \verb+Enum+ (recursivos) y flujos de control.
+
+\section{Ejercicios}
+
+\noindent
+El esqueleto de código del ejercicio semanal se encuentra en \url{https://github.com/alorozco53/LabLogComp-2018-2/tree/ejsem1}.
+
+\subsection{Listas}
+
+\begin{enumerate}
+\item Proponga una función \verb+myReverse+ que calcule la reversa de una lista.\
+  No utilice la función \verb+reverse+ del \emph{Preludio}.
+\item Escriba una función \verb+myTake+ que, dado un entero $k$ y una lista $l$,\
+  devuelva el prefijo de tamaño $k$ de $l$. Por ejemplo,
+  \begin{lstlisting}[language=Haskell]
+    *EjercicioSemanal1> myTake 3 [5,6,7,10,12,34,0]
+    [5,6,7]
+  \end{lstlisting}
+  No utilice la función \verb+take+ del \emph{Preludio}.
+\item Elabore una función \verb+myCount+ que, dado un elemento de cierto tipo y una\
+  lista del mismo tipo, cuente cuántas veces se repite dicho elemento en la lista.
+\item Escriba una función \verb+myFreq+ que, dada una lista $l$, devuelva la lista de\
+  $2$-tuplas, donde, para cada tupla, la primera entrada es un elemento de $l$ y la\
+  segunda es el número de veces que dicho elemento se repite en $l$. Se otorgarán\
+  $\frac{1}{4}$ de puntos extras por una implementación \emph{elegante}. Por ejemplo:
+    \begin{lstlisting}[language=Haskell]
+      *EjercicioSemanal1> myFreq "alonzo church"
+      [('a',1),('l',1),('o',2),('n',1),('z',1),('o',2),
+       (' ',1),('c',2),('h',2),('u',1),('r',1),('c',2),('h',2)]
+    \end{lstlisting}
+\item Dada una lista $l$ y dos enteros $i$, $j$, devuelve la sublista que empieza\
+  en el $i$-ésimo elemento de $l$ y termina en el $j-1$-ésimo. Esto es, análogo del\
+  \verb+list[i:j]+ de Python.
+\item Dada una lista de cierto y un elemento del mismo tipo, devuelve la lista de listas
+  formada por todas las sublistas que preceden y suceden las apariciones del elemento
+  Por ejemplo:
+  \begin{lstlisting}[language=Haskell]
+    *EjercicioSemanal1> split "the quick brown fox" ' '
+    ["the","quick","brown","fox"]
+  \end{lstlisting}
+  Análogo al list.split() de Python.
+\item Considere el siguiente algoritmo de compresión de cadenas: \textit{dada una palabra de tamaño} $k$
+  \textit{alfanumérica (sin espacios entre carácter), mantenga únicamente los primeros}
+  $\lfloor\frac{k}{2}\rfloor$ \textit{elementos de ésta; realice esto para cada palabra (en orden)}\
+  \textit{de la cadena en cuestión; finalmente, concatene todos los prefijos restantes}.\
+  Proponga una función \verb+dumbCompress+ que implemente el algoritmo anterior. Por ejemplo:
+  \begin{lstlisting}[language=Haskell]
+    *EjercicioSemanal1> dumbCompress "la science n'a pas de patrie"
+    "lscinpdpat"
+  \end{lstlisting}
+\end{enumerate}
+
+\subsection{Números naturales}
+
+\noindent
+Considere el tipo de datos de números naturales
+\begin{lstlisting}[language=Haskell]
+  data Nat = Zero | Succ Nat  
+\end{lstlisting}
+para la elaboración de lo siguiente.
+
+\begin{enumerate}[resume]
+\item Escriba una función \verb+sumNat+ que sume dos números naturales.
+\item Proponga una función \verb+prodNat+ que multiplique dos números naturales.
+\item Elabore una función \verb+powerNat+ que eleve un número natural a la potencia de otro.
+\item Escriba una función \verb+eqNat+ que decida si dos números naturales son iguales.\
+  No utilice la función \verb+(==)+ auto-implementada en la declaración del tipo \verb+Nat+.
+\item Dé una función \verb+greaterThan+ que, dados números naturales $n$ y $m$, decida\
+  si $n$ es mayor (estricto) que $m$.
+\item Escriba una función que convierta un número natural de tipo \verb+Nat+ en un entero\
+  de tipo \verb+Int+.
+\item Escriba una función que convierta un entero de tipo \verb+Int+ en un\
+  número natural de tipo \verb+Nat+.
+\item Elabore una función \verb+throwRev+ que, dado un \verb+Nat+ $n$ y una lista $l$,\
+  quite los $n$ últimos elementos de $l$.
+\end{enumerate}
+
+\section{Entrega}
+
+\noindent
+La fecha de entrega es el próximo \textbf{jueves 8 de febrero de 2018} por la plataforma\
+de \emph{Google Classroom} del curso y siguiendo los lineamientos del laboratorio.
 
 \end{document}

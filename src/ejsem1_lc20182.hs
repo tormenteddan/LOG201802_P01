@@ -80,11 +80,11 @@ natToInt = error "to be implemented..."
 intToNat :: Int -> Nat
 intToNat = error "to be implemented..."
 
--- Quita el sufijo de tamaño k de una lista (los últimos k elementos de una lista)
+-- Quita los últimos k elementos de una lista
 throwRev :: Nat -> [a] -> [a]
 throwRev = error "to be implemented..."
 
--- "Comprime" la cadena dada concetenando los prefijos de longitud a lo más la mitad de la
+-- "Comprime" la cadena dada concatenando los prefijos de longitud a lo más la mitad de la
 -- longitud de cada palabra
 -- Por ejemplo:
 -- dumbCompress "the quick brown fox jumps over the lazy dog" =
