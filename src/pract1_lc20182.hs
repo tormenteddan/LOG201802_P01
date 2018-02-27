@@ -46,7 +46,7 @@ model = error "TBD"
 -- Devuelve todas las variables contenidas en una fórmula dada
 vars :: Prop -> [String]
 vars = error "TBD"
-  
+
 -- Genera la lista (conjunto) potencia de una lista
 powerSet :: Eq a => [a] -> [[a]]
 powerSet = error "TBD"
