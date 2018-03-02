@@ -5,60 +5,163 @@ Stability   :  experimental
 Portability :  portable
 Version     :  0.1
 -}
-
 module Practica1 where
 
+import           Data.List
 
 -- Cálculo de proposiciones
-data Prop = VarP String            -- Variable proposicional
-          | TTrue                  -- T
-          | FFalse                 -- ⊥
-          | Neg Prop               -- ¬ Φ
-          | Conj Prop Prop         -- Φ ^ Ψ
-          | Disj Prop Prop         -- Φ v Ψ
-          | Imp Prop Prop          -- Φ -> Ψ
-          | Equiv Prop Prop        -- Φ <-> Ψ
-
--- Imprime una fórmula utilizando operadores infijos
-instance Show Prop where
-  show = error "TBD"
+data Prop = Var String            -- Variable proposicional
+          | TTrue                 -- T
+          | FFalse                -- ⊥
+          | Neg Prop              -- ¬ Φ
+          | Conj Prop Prop        -- Φ ^ Ψ
+          | Disy Prop Prop        -- Φ v Ψ
+          | Impl Prop Prop        -- Φ -> Ψ
+          | Equi Prop Prop        -- Φ <-> Ψ
 
 -- Tipo de dato de sustituciones
 type Sub = String -> Prop
-
--- Sustituciones
-substitute :: Prop -> Sub -> Prop
-substitute = error "TBD"
 
 -- Tipo de dato de estado para variables proposicionales
 -- Interpretamos como verdaderas, únicamente y exclusivamentelas variables contenidas
 -- en la lista dada como estado
 type State = [String]
 
+-- Imprime una fórmula utilizando operadores infijos
+instance Show Prop where
+  show f = case f of
+    TTrue -> "⊤"
+    FFalse -> "⊥"
+    (Var x) -> x
+    (Neg f1) -> case f1 of
+        TTrue        -> "'⊤"
+        FFalse       -> "'⊥"
+        (Var x)      -> "'" ++ x
+        (Neg n1)     -> "'" ++ show n1
+        (Disy n1 n2) -> "'" ++ show (Disy n1 n2)
+        (Conj n1 n2) -> "'" ++ show (Conj n1 n2)
+        (Impl n1 n2) -> "'" ++ show (Impl n1 n2)
+        (Equi n1 n2) -> "'" ++ show (Equi n1 n2)
+    (Disy f1 f2) -> "(" ++ show f1 ++ " V " ++ show f2 ++ ")"
+    (Conj f1 f2) -> "(" ++ show f1 ++ " ^ " ++ show f2 ++ ")"
+    (Impl f1 f2) -> "(" ++ show f1 ++ " -> " ++ show f2 ++ ")"
+    (Equi f1 f2) -> "(" ++ show f1 ++ " <-> " ++ show f2 ++ ")"
+
+-- Sustituciones
+substitute :: Prop -> Sub -> Prop
+substitute f subs = case f of
+    TTrue        -> TTrue
+    FFalse       -> FFalse
+    (Var p)      -> subs p
+    (Neg p)      -> Neg $ substitute p subs
+    (Disy p1 p2) -> substitute p1 subs `Disy` substitute p2 subs
+    (Conj p1 p2) -> substitute p1 subs `Conj` substitute p2 subs
+    (Impl p1 p2) -> substitute p1 subs `Impl` substitute p2 subs
+    (Equi p1 p2) -> substitute p1 subs `Equi` substitute p2 subs
+
+-- | neg. Funcion que devuelve la negacion de una constante booleana.
+--
+-- >>> neg False
+-- True
+neg :: Bool -> Bool
+neg p = p `nand` p
+
+-- | conj. Funcion que devuelve la conjuncion de dos constantes booleanas.
+--
+-- >>> conj True True
+-- True
+conj :: Bool -> Bool -> Bool
+conj p q = neg  (p `nand` q)
+
+-- | disy. Funcion que devuelve la disyuncion de dos constantes booleanas.
+--
+-- >>> disy True False = True
+disy :: Bool -> Bool -> Bool
+disy p q = neg (neg p `conj` neg q)
+
+-- | impl. Funcion que devuelve la implicacion de dos constantes booleanas.
+--
+-- >>> impl False True
+-- True
+impl :: Bool -> Bool -> Bool
+impl p q = neg p `disy` q
+
+-- | iif. Funcion que devuelve la doble condicional de dos constantes booleanas.
+--
+-- >>> Equi True False
+-- False
+iiff :: Bool -> Bool -> Bool
+iiff p q = (p `impl` q) `conj` (q `impl` p)
+
+-- | xor. Funcion que devuelve la disyuncion exclusiva de dos constantes booleanas.
+--
+-- >>> xor True False
+-- True
+xor :: Bool -> Bool -> Bool
+xor p q = (p `disy` q) `conj` neg (p `conj` q)
+
+-- | nand. Funcion que devuelve la conjuncion negada de dos constantes booleanas.
+--
+-- >>> nand True False
+-- True
+nand :: Bool -> Bool -> Bool
+nand True  True  = False
+nand True  False = True
+nand False True  = True
+nand False False = True
+
+-- | nor. Funcion que devuelve la disyuncion negada de dos constantes booleanas.
+--
+-- >>> nor True False
+-- False
+nor :: Bool -> Bool -> Bool
+nor p q = neg (p `disy` q)
+
 -- Interpretaciones
-interp :: Prop -> State -> Bool
-interp = error "TBD"
+interp :: State -> Prop -> Bool
+interp _ TTrue      = True
+interp _ FFalse     = False
+interp m (Var v)    = v `elem` m
+interp m (Neg  p)   = neg (interp m p)
+interp m (Conj p q) = interp m p `conj` interp m q
+interp m (Disy p q) = interp m p `disy` interp m q
+interp m (Impl p q) = interp m p `impl` interp m q
+interp m (Equi p q) = interp m p `iiff` interp m q
 
 -- Dado un estado, ¿será un modelo para una fórmula?
-model :: Prop -> State -> Bool
-model = error "TBD"
+model :: State -> Prop -> Bool
+model = interp
 
 -- Devuelve todas las variables contenidas en una fórmula dada
 vars :: Prop -> [String]
-vars = error "TBD"
+vars = rmdups . vars' [] where
+    vars' acc (Var f)      = f:acc
+    vars' acc (Neg f)      = vars' acc f
+    vars' acc (Disy f1 f2) = vars' (vars' acc f1) f2
+    vars' acc (Conj f1 f2) = vars' (vars' acc f1) f2
+    vars' acc (Impl f1 f2) = vars' (vars' acc f1) f2
+    vars' acc (Equi f1 f2) = vars' (vars' acc f1) f2
+    vars' acc _            = acc
 
 -- Genera la lista (conjunto) potencia de una lista
-powerSet :: Eq a => [a] -> [[a]]
-powerSet = error "TBD"
+powerSet :: Ord a => [a] -> [[a]]
+powerSet ss = [] : powerSetAux (rmdups ss)
+    where powerSetAux []      =  []
+          powerSetAux (x:xs)  =  [x] : foldr f [] (powerSetAux xs)
+            where f curr rest = curr : (x : curr) : rest
+
+rmdups :: (Ord a) => [a] -> [a]
+rmdups = map head . group . sort
 
 -- ¿Es tautología?
 tautology :: Prop -> Bool
-tautology = error "TBD"
+tautology p = all (==True) [interp m p | m <- powerSet $ vars p]
 
 -- Equivalencia de fórmulas
 equivProp :: Prop -> Prop -> Bool
-equivProp = error "TBD"
+equivProp p1 p2 = tautology $ Equi p1 p2
 
 -- Consecuencia lógica
 logicConsequence :: [Prop] -> Prop -> Bool
-logicConsequence = error "TBD"
+logicConsequence ps c = all (==False) [interp m hypotheses | m <- powerSet $ vars hypotheses]
+    where hypotheses = foldr Conj (Neg c) ps
