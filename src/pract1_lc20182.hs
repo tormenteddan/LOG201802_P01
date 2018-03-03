@@ -59,74 +59,24 @@ substitute f subs = case f of
     (Impl p1 p2) -> substitute p1 subs `Impl` substitute p2 subs
     (Equi p1 p2) -> substitute p1 subs `Equi` substitute p2 subs
 
--- | neg. Funcion que devuelve la negacion de una constante booleana.
---
--- >>> neg False
--- True
-neg :: Bool -> Bool
-neg p = p `nand` p
+-- | The biconditional operator can be read as logical equivalence.
+(<->) :: Bool -> Bool -> Bool
+(<->) = (==)
 
--- | conj. Funcion que devuelve la conjuncion de dos constantes booleanas.
---
--- >>> conj True True
--- True
-conj :: Bool -> Bool -> Bool
-conj p q = neg  (p `nand` q)
-
--- | disy. Funcion que devuelve la disyuncion de dos constantes booleanas.
---
--- >>> disy True False = True
-disy :: Bool -> Bool -> Bool
-disy p q = neg (neg p `conj` neg q)
-
--- | impl. Funcion que devuelve la implicacion de dos constantes booleanas.
---
--- >>> impl False True
--- True
-impl :: Bool -> Bool -> Bool
-impl p q = neg p `disy` q
-
--- | iif. Funcion que devuelve la doble condicional de dos constantes booleanas.
---
--- >>> Equi True False
--- False
-iiff :: Bool -> Bool -> Bool
-iiff p q = (p `impl` q) `conj` (q `impl` p)
-
--- | xor. Funcion que devuelve la disyuncion exclusiva de dos constantes booleanas.
---
--- >>> xor True False
--- True
-xor :: Bool -> Bool -> Bool
-xor p q = (p `disy` q) `conj` neg (p `conj` q)
-
--- | nand. Funcion que devuelve la conjuncion negada de dos constantes booleanas.
---
--- >>> nand True False
--- True
-nand :: Bool -> Bool -> Bool
-nand True  True  = False
-nand True  False = True
-nand False True  = True
-nand False False = True
-
--- | nor. Funcion que devuelve la disyuncion negada de dos constantes booleanas.
---
--- >>> nor True False
--- False
-nor :: Bool -> Bool -> Bool
-nor p q = neg (p `disy` q)
+-- | Φ -> Ψ is equivalent to ¬Φ v Ψ
+(-->) :: Bool -> Bool -> Bool
+(-->) phi psi = not phi || psi
 
 -- Interpretaciones
 interp :: State -> Prop -> Bool
 interp _ TTrue      = True
 interp _ FFalse     = False
 interp m (Var v)    = v `elem` m
-interp m (Neg  p)   = neg (interp m p)
-interp m (Conj p q) = interp m p `conj` interp m q
-interp m (Disy p q) = interp m p `disy` interp m q
-interp m (Impl p q) = interp m p `impl` interp m q
-interp m (Equi p q) = interp m p `iiff` interp m q
+interp m (Neg  p)   = not (interp m p)
+interp m (Conj p q) = interp m p && interp m q
+interp m (Disy p q) = interp m p || interp m q
+interp m (Impl p q) = interp m p --> interp m q
+interp m (Equi p q) = interp m p <-> interp m q
 
 -- Dado un estado, ¿será un modelo para una fórmula?
 model :: State -> Prop -> Bool
@@ -134,7 +84,7 @@ model = interp
 
 -- Devuelve todas las variables contenidas en una fórmula dada
 vars :: Prop -> [String]
-vars = rmdups . vars' [] where
+vars = dedup . vars' [] where
     vars' acc (Var f)      = f:acc
     vars' acc (Neg f)      = vars' acc f
     vars' acc (Disy f1 f2) = vars' (vars' acc f1) f2
@@ -145,17 +95,20 @@ vars = rmdups . vars' [] where
 
 -- Genera la lista (conjunto) potencia de una lista
 powerSet :: Ord a => [a] -> [[a]]
-powerSet ss = [] : powerSetAux (rmdups ss)
+powerSet ss = [] : powerSetAux (dedup ss)
     where powerSetAux []      =  []
           powerSetAux (x:xs)  =  [x] : foldr f [] (powerSetAux xs)
             where f curr rest = curr : (x : curr) : rest
 
-rmdups :: (Ord a) => [a] -> [a]
-rmdups = map head . group . sort
+-- | La función `dedup` remueve duplicados de una lista ordenable.
+-- Hace esto ordenando la lista, agrupando elementos iguales y
+-- extrayendo el primero de cada uno de estos grupos.
+dedup :: (Ord a) => [a] -> [a]
+dedup = map head . group . sort
 
 -- ¿Es tautología?
 tautology :: Prop -> Bool
-tautology p = all (==True) [interp m p | m <- powerSet $ vars p]
+tautology p = and [interp m p | m <- powerSet $ vars p]
 
 -- Equivalencia de fórmulas
 equivProp :: Prop -> Prop -> Bool
@@ -163,5 +116,5 @@ equivProp p1 p2 = tautology $ Equi p1 p2
 
 -- Consecuencia lógica
 logicConsequence :: [Prop] -> Prop -> Bool
-logicConsequence ps c = all (==False) [interp m hypotheses | m <- powerSet $ vars hypotheses]
+logicConsequence ps c = not $ and [interp m hypotheses | m <- powerSet $ vars hypotheses]
     where hypotheses = foldr Conj (Neg c) ps
