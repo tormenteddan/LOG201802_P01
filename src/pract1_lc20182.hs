@@ -116,5 +116,5 @@ equivProp p1 p2 = tautology $ Equi p1 p2
 
 -- Consecuencia lógica
 logicConsequence :: [Prop] -> Prop -> Bool
-logicConsequence ps c = not $ and [interp m hypotheses | m <- powerSet $ vars hypotheses]
+logicConsequence ps c = not $ or [interp m hypotheses | m <- powerSet $ vars hypotheses]
     where hypotheses = foldr Conj (Neg c) ps
