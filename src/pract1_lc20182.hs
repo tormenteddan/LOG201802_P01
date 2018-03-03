@@ -63,7 +63,7 @@ substitute f subs = case f of
 (<->) :: Bool -> Bool -> Bool
 (<->) = (==)
 
--- | Φ -> Ψ is equivalent to ¬Φ v Ψ
+-- | Φ -> Ψ <-> ¬Φ v Ψ
 (-->) :: Bool -> Bool -> Bool
 (-->) phi psi = not phi || psi
 
