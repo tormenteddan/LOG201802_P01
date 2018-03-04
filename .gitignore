@@ -83,3 +83,7 @@ items.json
 
 # Haskell
 *-solution*
+
+# Pandoc
+pandoc.md
+metadata.yaml

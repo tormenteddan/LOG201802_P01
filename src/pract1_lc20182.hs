@@ -1,120 +1,139 @@
 {- |
-Module      :  Practica1
-Maintainer  :  alorozco.patriot53@gmail.com
+Module      :  Propositional
+Author      :  Luis Daniel Aragon Bermudez
+Maintainer  :  daniel.aragon@ciencias.unam.mx
 Stability   :  experimental
 Portability :  portable
 Version     :  0.1
 -}
-module Practica1 where
+module Propositional(
+    -- * Logical proposition
+    Prop,
+    -- * Logical state
+    State,
+    -- * Propositional calculus substitution
+    Sub,
+    -- ** Logical calculus functions
+    substitute,
+    interp,
+    model,
+    vars,
+    tautology,
+    equivProp,
+    logicConsequence
+    ) where
 
 import           Data.List
 
--- Cálculo de proposiciones
-data Prop = Var String            -- Variable proposicional
-          | TTrue                 -- T
-          | FFalse                -- ⊥
-          | Neg Prop              -- ¬ Φ
-          | Conj Prop Prop        -- Φ ^ Ψ
-          | Disy Prop Prop        -- Φ v Ψ
-          | Impl Prop Prop        -- Φ -> Ψ
-          | Equi Prop Prop        -- Φ <-> Ψ
+infixl 5 :&&
+infixl 5 :||
+infixr 4 :->
+infixl 3 :<>
 
--- Tipo de dato de sustituciones
+-- | Prop datatype. Defines a proposition in propositional calculus.
+data Prop = Var String    -- ^ Propositional variable
+          | Const Bool    -- ^ Propositional constant
+          | Neg Prop      -- ^ Negation, ¬P
+          | Prop :&& Prop -- ^ Conjunction, P ∧ Q
+          | Prop :|| Prop -- ^ Disyunction, P ∨ Q
+          | Prop :-> Prop -- ^ Conditional, P -> Q
+          | Prop :<> Prop -- ^ Biconditional, P <-> Q
+
+-- | Sub type. Functions that map propositional variables (by their
+-- constructing string) within a proposition to other propositions.
+--   Examples:
+--       The substitution [p:=p->q] can be specified by the `Sub` s:
+--       s "p"   = Var "p" :-> Var "q"
+--       s other = Var other
 type Sub = String -> Prop
 
--- Tipo de dato de estado para variables proposicionales
--- Interpretamos como verdaderas, únicamente y exclusivamentelas variables contenidas
--- en la lista dada como estado
+-- | State type. Denotes a mapping of propositional variables to truth values.
+-- A propositional variable `Var s` should be mapped to True  by an
+-- interpretation iif `s` is contained in its "generating" state
 type State = [String]
 
--- Imprime una fórmula utilizando operadores infijos
 instance Show Prop where
   show f = case f of
-    TTrue -> "⊤"
-    FFalse -> "⊥"
+    Const bool -> if bool then "\8868" else "\8869"
     (Var x) -> x
     (Neg f1) -> case f1 of
-        TTrue        -> "'⊤"
-        FFalse       -> "'⊥"
-        (Var x)      -> "'" ++ x
-        (Neg n1)     -> "'" ++ show n1
-        (Disy n1 n2) -> "'" ++ show (Disy n1 n2)
-        (Conj n1 n2) -> "'" ++ show (Conj n1 n2)
-        (Impl n1 n2) -> "'" ++ show (Impl n1 n2)
-        (Equi n1 n2) -> "'" ++ show (Equi n1 n2)
-    (Disy f1 f2) -> "(" ++ show f1 ++ " V " ++ show f2 ++ ")"
-    (Conj f1 f2) -> "(" ++ show f1 ++ " ^ " ++ show f2 ++ ")"
-    (Impl f1 f2) -> "(" ++ show f1 ++ " -> " ++ show f2 ++ ")"
-    (Equi f1 f2) -> "(" ++ show f1 ++ " <-> " ++ show f2 ++ ")"
+        (Const bool) -> if bool then "NOT \8868" else "NOT \8869"
+        (Var x)      -> "NOT " ++ x
+        (Neg n1)     -> "NOT " ++ show n1
+        other        -> "NOT " ++ show other
+    (f1:||f2) -> "(" ++ show f1 ++ " ∨ " ++ show f2 ++ ")"
+    (f1:&&f2) -> "(" ++ show f1 ++ " ∧ " ++ show f2 ++ ")"
+    (f1:->f2) -> "(" ++ show f1 ++ " -> " ++ show f2 ++ ")"
+    (f1:<>f2) -> "(" ++ show f1 ++ " <-> " ++ show f2 ++ ")"
 
--- Sustituciones
+-- |substitute. Performs the substitution provided as its first argument on the
+-- proposition provided as its second argument
 substitute :: Prop -> Sub -> Prop
 substitute f subs = case f of
-    TTrue        -> TTrue
-    FFalse       -> FFalse
-    (Var p)      -> subs p
-    (Neg p)      -> Neg $ substitute p subs
-    (Disy p1 p2) -> substitute p1 subs `Disy` substitute p2 subs
-    (Conj p1 p2) -> substitute p1 subs `Conj` substitute p2 subs
-    (Impl p1 p2) -> substitute p1 subs `Impl` substitute p2 subs
-    (Equi p1 p2) -> substitute p1 subs `Equi` substitute p2 subs
+    (Var p)   -> subs p
+    (Neg p)   -> Neg $ substitute p subs
+    (p1:||p2) -> substitute p1 subs :|| substitute p2 subs
+    (p1:&&p2) -> substitute p1 subs :&& substitute p2 subs
+    (p1:->p2) -> substitute p1 subs :-> substitute p2 subs
+    (p1:<>p2) -> substitute p1 subs :<> substitute p2 subs
+    other     -> other
 
--- | The biconditional operator can be read as logical equivalence.
-(<->) :: Bool -> Bool -> Bool
-(<->) = (==)
-
--- | Φ -> Ψ <-> ¬Φ v Ψ
-(-->) :: Bool -> Bool -> Bool
-(-->) phi psi = not phi || psi
-
--- Interpretaciones
+-- |interp. Recursively evaluates the truth value of a proposition given a state
 interp :: State -> Prop -> Bool
-interp _ TTrue      = True
-interp _ FFalse     = False
-interp m (Var v)    = v `elem` m
-interp m (Neg  p)   = not (interp m p)
-interp m (Conj p q) = interp m p && interp m q
-interp m (Disy p q) = interp m p || interp m q
-interp m (Impl p q) = interp m p --> interp m q
-interp m (Equi p q) = interp m p <-> interp m q
+interp _ (Const bool) = bool
+interp m (Var v)      = v `elem` m
+interp m (Neg  p)     = not (interp m p)
+interp m (p:&&q)      = interp m p && interp m q
+interp m (p:||q)      = interp m p || interp m q
+interp m (p:->q)      = not (interp m p) || interp m q
+interp m (p:<>q)      = interp m p == interp m q
 
--- Dado un estado, ¿será un modelo para una fórmula?
+-- |model. Given a state and a proposition, determines if said state is a model
+-- of said proposition.
 model :: State -> Prop -> Bool
 model = interp
 
--- Devuelve todas las variables contenidas en una fórmula dada
+-- |vars. Returns the set (as a list) of variables within a proposition.
 vars :: Prop -> [String]
-vars = dedup . vars' [] where
-    vars' acc (Var f)      = f:acc
-    vars' acc (Neg f)      = vars' acc f
-    vars' acc (Disy f1 f2) = vars' (vars' acc f1) f2
-    vars' acc (Conj f1 f2) = vars' (vars' acc f1) f2
-    vars' acc (Impl f1 f2) = vars' (vars' acc f1) f2
-    vars' acc (Equi f1 f2) = vars' (vars' acc f1) f2
-    vars' acc _            = acc
+vars = set . vars' [] where
+    vars' acc (Var f)   = f:acc
+    vars' acc (Neg f)   = vars' acc f
+    vars' acc (f1:||f2) = vars' (vars' acc f1) f2
+    vars' acc (f1:&&f2) = vars' (vars' acc f1) f2
+    vars' acc (f1:->f2) = vars' (vars' acc f1) f2
+    vars' acc (f1:<>f2) = vars' (vars' acc f1) f2
+    vars' acc _         = acc
 
--- Genera la lista (conjunto) potencia de una lista
-powerSet :: Ord a => [a] -> [[a]]
-powerSet ss = [] : powerSetAux (dedup ss)
-    where powerSetAux []      =  []
-          powerSetAux (x:xs)  =  [x] : foldr f [] (powerSetAux xs)
-            where f curr rest = curr : (x : curr) : rest
-
--- | La función `dedup` remueve duplicados de una lista ordenable.
--- Hace esto ordenando la lista, agrupando elementos iguales y
--- extrayendo el primero de cada uno de estos grupos.
-dedup :: (Ord a) => [a] -> [a]
-dedup = map head . group . sort
-
--- ¿Es tautología?
+-- |tautology. Determines if a proposition is a tautology, i.e. every interpretation
+-- of said proposition returns true.
 tautology :: Prop -> Bool
 tautology p = and [interp m p | m <- powerSet $ vars p]
 
--- Equivalencia de fórmulas
+-- |equivProp. Determines if two propositions are equivalent. By the rules of
+-- propositional logic: φ ≡ ψ ⇔ ⊧ φ ↔ ψ
 equivProp :: Prop -> Prop -> Bool
-equivProp p1 p2 = tautology $ Equi p1 p2
+equivProp p1 p2 = tautology (p1:<>p2)
 
--- Consecuencia lógica
+-- |logicConsequence. Determines if the proposition provided as the second
+-- argument is a logical consequence of the premises (list of propositions)
+-- provided as the first argument. It does this by applying the refutation
+-- principle: Γ ⊧ φ ⇔ Γ ∪ ¬ {φ} is unsatisfiable.
 logicConsequence :: [Prop] -> Prop -> Bool
-logicConsequence ps c = not $ or [interp m hypotheses | m <- powerSet $ vars hypotheses]
-    where hypotheses = foldr Conj (Neg c) ps
+logicConsequence ps c = not $
+    or [interp m hypotheses | m <- powerSet $ vars hypotheses]
+        where hypotheses = foldr (:&&) (Neg c) ps
+
+-- |set. Given a list of ordered datatype, it removes duplicates by ordering
+-- the list, grouping like elements and extracting the first element of each
+-- group into a list, effectively converting it into a sort of set derived from
+-- the original list.
+set :: Ord a => [a] -> [a]
+set = map head . group . sort
+
+-- |powerSet. Given a list of ordered datatype, it returns all the possible
+-- subsets of its set version. Effectively it returns its power set.
+powerSet :: Ord a => [a] -> [[a]]
+powerSet ss = [] : powerSetAux (set ss)
+    where powerSetAux []      =  []
+          powerSetAux (x:xs)  =  [x] : foldr f [] (powerSetAux xs)
+            where f curr rest = curr : (x : curr) : rest
