@@ -20,7 +20,8 @@ module Propositional(
     vars,
     tautology,
     equivProp,
-    logicConsequence
+    logicConsequence,
+    nnf
     ) where
 
 import           Data.List
@@ -137,3 +138,17 @@ powerSet ss = [] : powerSetAux (set ss)
     where powerSetAux []      =  []
           powerSetAux (x:xs)  =  [x] : foldr f [] (powerSetAux xs)
             where f curr rest = curr : (x : curr) : rest
+
+-- |nnf. Converts a formula to its negation normal form
+nnf :: Prop -> Prop
+nnf = nnfAux . nnfAux
+    where nnfAux (Var p)       = Var p
+          nnfAux (Const b)     = Const b
+          nnfAux (p:->q)       = nnfAux (Neg p) :|| nnfAux q
+          nnfAux (p:<>q)       = nnfAux (p :-> q) :&& nnfAux (q :-> p)
+          nnfAux (Neg (Neg p)) = nnfAux p
+          nnfAux (p:&&q)       = nnfAux p :&& nnfAux q
+          nnfAux (p:||q)       = nnfAux p :|| nnfAux q
+          nnfAux (Neg (p:&&q)) = nnfAux (Neg p) :|| nnfAux (Neg q)
+          nnfAux (Neg (p:||q)) = nnfAux (Neg p) :&& nnfAux (Neg q)
+          nnfAux (Neg p)       = Neg $ nnfAux p
