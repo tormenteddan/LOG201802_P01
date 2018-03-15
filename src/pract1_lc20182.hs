@@ -29,7 +29,7 @@ import           Data.List
 infixl 5 :&&
 infixl 5 :||
 infixr 4 :->
-infixl 3 :<>
+infixl 3 :==
 
 -- | Prop datatype. Defines a proposition in propositional calculus.
 data Prop = Var String    -- ^ Propositional variable
@@ -38,7 +38,7 @@ data Prop = Var String    -- ^ Propositional variable
           | Prop :&& Prop -- ^ Conjunction, P ∧ Q
           | Prop :|| Prop -- ^ Disyunction, P ∨ Q
           | Prop :-> Prop -- ^ Conditional, P -> Q
-          | Prop :<> Prop -- ^ Biconditional, P <-> Q
+          | Prop :== Prop -- ^ Biconditional, P <-> Q
 
 -- | Sub type. Functions that map propositional variables (by their
 -- constructing string) within a proposition to other propositions.
@@ -65,7 +65,7 @@ instance Show Prop where
     (f1:||f2) -> "(" ++ show f1 ++ " ∨ " ++ show f2 ++ ")"
     (f1:&&f2) -> "(" ++ show f1 ++ " ∧ " ++ show f2 ++ ")"
     (f1:->f2) -> "(" ++ show f1 ++ " -> " ++ show f2 ++ ")"
-    (f1:<>f2) -> "(" ++ show f1 ++ " <-> " ++ show f2 ++ ")"
+    (f1:==f2) -> "(" ++ show f1 ++ " <-> " ++ show f2 ++ ")"
 
 -- |substitute. Performs the substitution provided as its first argument on the
 -- proposition provided as its second argument
@@ -76,7 +76,7 @@ substitute f subs = case f of
     (p1:||p2) -> substitute p1 subs :|| substitute p2 subs
     (p1:&&p2) -> substitute p1 subs :&& substitute p2 subs
     (p1:->p2) -> substitute p1 subs :-> substitute p2 subs
-    (p1:<>p2) -> substitute p1 subs :<> substitute p2 subs
+    (p1:==p2) -> substitute p1 subs :== substitute p2 subs
     other     -> other
 
 -- |interp. Recursively evaluates the truth value of a proposition given a state
@@ -87,7 +87,7 @@ interp m (Neg  p)     = not (interp m p)
 interp m (p:&&q)      = interp m p && interp m q
 interp m (p:||q)      = interp m p || interp m q
 interp m (p:->q)      = not (interp m p) || interp m q
-interp m (p:<>q)      = interp m p == interp m q
+interp m (p:==q)      = interp m p == interp m q
 
 -- |model. Given a state and a proposition, determines if said state is a model
 -- of said proposition.
@@ -102,7 +102,7 @@ vars = set . vars' [] where
     vars' acc (f1:||f2) = vars' (vars' acc f1) f2
     vars' acc (f1:&&f2) = vars' (vars' acc f1) f2
     vars' acc (f1:->f2) = vars' (vars' acc f1) f2
-    vars' acc (f1:<>f2) = vars' (vars' acc f1) f2
+    vars' acc (f1:==f2) = vars' (vars' acc f1) f2
     vars' acc _         = acc
 
 -- |tautology. Determines if a proposition is a tautology, i.e. every interpretation
@@ -113,7 +113,7 @@ tautology p = and [interp m p | m <- powerSet $ vars p]
 -- |equivProp. Determines if two propositions are equivalent. By the rules of
 -- propositional logic: φ ≡ ψ ⇔ ⊧ φ ↔ ψ
 equivProp :: Prop -> Prop -> Bool
-equivProp p1 p2 = tautology (p1:<>p2)
+equivProp p1 p2 = tautology (p1:==p2)
 
 -- |logicConsequence. Determines if the proposition provided as the second
 -- argument is a logical consequence of the premises (list of propositions)
@@ -141,14 +141,16 @@ powerSet ss = [] : powerSetAux (set ss)
 
 -- |nnf. Converts a formula to its negation normal form
 nnf :: Prop -> Prop
-nnf = nnfAux . nnfAux
-    where nnfAux (Var p)       = Var p
-          nnfAux (Const b)     = Const b
-          nnfAux (p:->q)       = nnfAux (Neg p) :|| nnfAux q
-          nnfAux (p:<>q)       = nnfAux (p :-> q) :&& nnfAux (q :-> p)
-          nnfAux (Neg (Neg p)) = nnfAux p
-          nnfAux (p:&&q)       = nnfAux p :&& nnfAux q
-          nnfAux (p:||q)       = nnfAux p :|| nnfAux q
-          nnfAux (Neg (p:&&q)) = nnfAux (Neg p) :|| nnfAux (Neg q)
-          nnfAux (Neg (p:||q)) = nnfAux (Neg p) :&& nnfAux (Neg q)
-          nnfAux (Neg p)       = Neg $ nnfAux p
+nnf (Var p)         = Var p
+nnf (Const b)       = Const b
+nnf (p:->q)         = nnf (Neg p) :|| nnf q
+nnf (p:==q)         = nnf (p :-> q) :&& nnf (q :-> p)
+nnf (Neg (Neg p))   = nnf p
+nnf (Neg (p:&&q))   = nnf (Neg p) :|| nnf (Neg q)
+nnf (Neg (p:||q))   = nnf (Neg p) :&& nnf (Neg q)
+nnf (Neg (p:->q))   = nnf p :&& nnf (Neg q)
+nnf (Neg (p:==q))   = nnf (p :&& Neg q) :|| nnf (Neg p :&& q)
+nnf (Neg (Const b)) = Const $ not b
+nnf (Neg v)         = Neg v
+nnf (p:&&q)         = nnf p :&& nnf q
+nnf (p:||q)         = nnf p :|| nnf q
